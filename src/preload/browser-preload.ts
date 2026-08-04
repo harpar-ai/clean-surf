@@ -15,6 +15,8 @@ contextBridge.exposeInMainWorld('cleanShell', {
 
   // History autocomplete
   searchHistory: (query: string) => ipcRenderer.invoke('history:search', query),
+  openOmnibox: () => ipcRenderer.invoke('ui:omnibox-open'),
+  closeOmnibox: () => ipcRenderer.invoke('ui:omnibox-close'),
 
   // Toolbar layout
   setToolbarHeight: (showBar: boolean) => ipcRenderer.invoke('ui:set-toolbar-height', showBar),

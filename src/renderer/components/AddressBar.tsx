@@ -146,6 +146,9 @@ const AddressBar = forwardRef<AddressBarHandle, Props>(
       setIsFocused(true)
       setValue(url.startsWith('cleanshell://') ? url : url)
       setTimeout(() => inputRef.current?.select(), 0)
+      window.cleanShell.openOmnibox()
+      // Show recent history immediately on focus (before typing)
+      buildSuggestions('').then(setSuggestions)
     }
 
     const handleBlur = (e: React.FocusEvent) => {
@@ -155,6 +158,7 @@ const AddressBar = forwardRef<AddressBarHandle, Props>(
       setSuggestions([])
       setSelectedIdx(-1)
       setValue(displayUrl(url))
+      window.cleanShell.closeOmnibox()
     }
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

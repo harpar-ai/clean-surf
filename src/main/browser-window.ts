@@ -7,6 +7,7 @@ import { TOOLBAR_HEIGHT } from './constants'
 import type { Session } from 'electron'
 
 let currentToolbarHeight = TOOLBAR_HEIGHT
+const OMNIBOX_EXTRA = 360 // px added when address bar is open to expose dropdown
 const WINDOW_WIDTH = 1280
 const WINDOW_HEIGHT = 800
 
@@ -92,6 +93,18 @@ export class CleanShellWindow {
     currentToolbarHeight = height
     this.layoutUI(height)
     this.tabManager.setToolbarHeight(height)
+  }
+
+  // Expand toolbar to reveal omnibox dropdown (separate WebContentsView workaround)
+  openOmnibox(): void {
+    const expanded = currentToolbarHeight + OMNIBOX_EXTRA
+    this.layoutUI(expanded)
+    this.tabManager.setToolbarHeight(expanded)
+  }
+
+  closeOmnibox(): void {
+    this.layoutUI(currentToolbarHeight)
+    this.tabManager.setToolbarHeight(currentToolbarHeight)
   }
 }
 

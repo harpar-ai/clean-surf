@@ -17,6 +17,8 @@ declare global {
       goForward: () => Promise<void>
       reload: () => Promise<void>
       searchHistory: (query: string) => Promise<{ url: string; title: string }[]>
+      openOmnibox: () => Promise<void>
+      closeOmnibox: () => Promise<void>
       setToolbarHeight: (showBar: boolean) => Promise<void>
       notifyBookmarkBarState: (visible: boolean) => Promise<void>
       getBookmarks: () => Promise<Bookmark[]>
