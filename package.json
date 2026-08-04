@@ -11,6 +11,9 @@
     "package": "electron-vite build && electron-builder --mac dmg",
     "typecheck": "tsc --noEmit",
     "test": "node tests/browser.test.mjs",
+    "check-secrets": "node scripts/check-secrets.js --all",
+    "prepare": "node scripts/setup-hooks.js",
+    "prepackage": "node scripts/check-secrets.js --all",
     "postinstall": "node -e \"const fs=require('fs'); const s='node_modules/electron/dist/Electron.app'; const d='node_modules/electron/dist/Clean Surf.app'; if(fs.existsSync(s)&&!fs.existsSync(d)){fs.renameSync(s,d);} if(!fs.existsSync(s)){fs.symlinkSync('Clean Surf.app',s);} fs.writeFileSync('node_modules/electron/path.txt','Clean Surf.app/Contents/MacOS/Electron');\" && plutil -replace CFBundleName -string 'Clean Surf' 'node_modules/electron/dist/Clean Surf.app/Contents/Info.plist' && plutil -replace CFBundleDisplayName -string 'Clean Surf' 'node_modules/electron/dist/Clean Surf.app/Contents/Info.plist' && cp assets/CleanSurf.icns 'node_modules/electron/dist/Clean Surf.app/Contents/Resources/electron.icns' || true"
   },
   "dependencies": {
