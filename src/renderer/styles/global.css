@@ -280,6 +280,67 @@ body {
   flex-shrink: 0;
 }
 
+/* Omnibox dropdown */
+.omnibox-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: -40px; /* extend under nav buttons */
+  right: -50px; /* extend under badge */
+  background: #fff;
+  border: 1px solid #dadce0;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  z-index: 999;
+  overflow: hidden;
+  -webkit-app-region: no-drag;
+}
+
+.omnibox-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  cursor: default;
+}
+
+.omnibox-item:hover,
+.omnibox-item.selected {
+  background: #f1f3f4;
+}
+
+.omnibox-icon {
+  flex-shrink: 0;
+  width: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #5f6368;
+}
+
+.omnibox-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.omnibox-title {
+  font-size: 13px;
+  color: #202124;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.omnibox-url {
+  font-size: 11px;
+  color: #188038;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
 /* Star bookmark button */
 .star-btn {
   background: none;

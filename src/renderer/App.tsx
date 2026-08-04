@@ -16,6 +16,7 @@ declare global {
       goBack: () => Promise<void>
       goForward: () => Promise<void>
       reload: () => Promise<void>
+      searchHistory: (query: string) => Promise<{ url: string; title: string }[]>
       setToolbarHeight: (showBar: boolean) => Promise<void>
       notifyBookmarkBarState: (visible: boolean) => Promise<void>
       getBookmarks: () => Promise<Bookmark[]>
@@ -122,6 +123,8 @@ export default function App() {
 
     cs.getTabsState().then(setTabs)
     cs.getBookmarks().then(setBookmarks)
+    // Focus address bar on launch (same as Chrome)
+    setTimeout(() => addressBarRef.current?.focus(), 300)
 
     return () => {
       cs.off('tabs:state', onTabsState)
@@ -174,6 +177,7 @@ export default function App() {
           ref={addressBarRef}
           url={currentUrl}
           isBookmarked={isBookmarked}
+          bookmarks={bookmarks}
           onSubmit={handleLoadUrl}
           onToggleBookmark={handleToggleBookmark}
         />

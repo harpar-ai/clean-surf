@@ -13,6 +13,9 @@ contextBridge.exposeInMainWorld('cleanShell', {
   goForward: () => ipcRenderer.invoke('nav:go-forward'),
   reload: () => ipcRenderer.invoke('nav:reload'),
 
+  // History autocomplete
+  searchHistory: (query: string) => ipcRenderer.invoke('history:search', query),
+
   // Toolbar layout
   setToolbarHeight: (showBar: boolean) => ipcRenderer.invoke('ui:set-toolbar-height', showBar),
   notifyBookmarkBarState: (visible: boolean) => ipcRenderer.invoke('ui:bookmark-bar-state', visible),

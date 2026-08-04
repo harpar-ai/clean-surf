@@ -67,6 +67,14 @@ export function registerIpcHandlers(registry: BrowserWindowRegistry): void {
     }
   })
 
+  // History search (for address bar autocomplete)
+  ipcMain.handle('history:search', (_event, query: unknown) => {
+    if (typeof query !== 'string' || query.length > 512) return []
+    const { search, getAll } = require('./history-manager') as typeof import('./history-manager')
+    const results = query.trim() ? search(query) : getAll()
+    return results.slice(0, 8).map(e => ({ url: e.url, title: e.title }))
+  })
+
   // Bookmarks
   ipcMain.handle('bookmarks:get', () => bookmarkManager.getAll())
   ipcMain.handle('bookmarks:clear', (_event) => {
