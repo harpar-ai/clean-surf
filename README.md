@@ -41,9 +41,13 @@ A privacy-first macOS browser built on Chromium. Blocks ads and trackers, auto-d
 1. Go to [Releases](https://github.com/harpar-ai/clean-surf/releases/latest)
 2. Download `Clean Surf-x.x.x-arm64.dmg`
 3. Open the DMG and drag **Clean Surf** to your Applications folder
-4. **Right-click → Open** on first launch
+4. Open **Terminal** and run:
+   ```bash
+   xattr -cr "/Applications/Clean Surf.app"
+   ```
+5. Open Clean Surf normally from your Applications folder
 
-   > macOS will warn "unidentified developer" because the app is not notarized. Right-click → Open bypasses this. You only need to do this once — future launches and updates work normally.
+> **Why this step?** Clean Surf is not notarized with Apple (no $99/year developer account). macOS quarantines apps downloaded from the internet and marks unsigned ones as "damaged". The `xattr -cr` command removes the quarantine flag. You only need to do this once.
 
 ### Option B — Build from source
 
