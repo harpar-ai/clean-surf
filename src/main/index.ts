@@ -101,8 +101,8 @@ function buildAppMenu(): void {
         {
           label: 'Check for Updates…',
           click: async () => {
-            const { checkForUpdates } = await import('./update-checker')
-            await checkForUpdates(false)
+            const { checkForUpdatesManual } = await import('./update-checker')
+            await checkForUpdatesManual()
           }
         },
         { type: 'separator' },
