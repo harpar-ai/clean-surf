@@ -4,19 +4,31 @@ import { app } from 'electron'
 
 const GITHUB_RELEASE_URL = 'https://github.com/harpar-ai/clean-surf/releases/latest'
 
-// Don't download automatically — always ask first
 autoUpdater.autoDownload = false
 autoUpdater.autoInstallOnAppQuit = true
-
-// Suppress electron-updater's own dialogs; we handle UX ourselves
 autoUpdater.logger = null
 
 let manualCheck = false
 let downloadInProgress = false
 
+// Only notify for major or minor version bumps (e.g. 1.x → 2.x or 1.1 → 1.2).
+// Patch releases (1.1.7 → 1.1.8) are skipped in background checks.
+function isSignificantUpdate(latest: string, current: string): boolean {
+  const parse = (v: string) => v.split('.').map(n => parseInt(n, 10) || 0)
+  const [lMaj, lMin] = parse(latest)
+  const [cMaj, cMin] = parse(current)
+  return lMaj > cMaj || (lMaj === cMaj && lMin > cMin)
+}
+
 // ─── Events ────────────────────────────────────────────────────────────────
 
 autoUpdater.on('update-available', async (info) => {
+  // Background checks only notify for major/minor bumps — ignore patch releases
+  if (!manualCheck && !isSignificantUpdate(info.version, app.getVersion())) {
+    console.log(`[Updater] Patch update ${info.version} available — skipping background notification`)
+    return
+  }
+
   const { response } = await dialog.showMessageBox({
     type: 'info',
     title: 'Update available',
@@ -101,7 +113,10 @@ export async function checkForUpdatesManual(): Promise<void> {
 }
 
 // Background check on startup / timer
+const CHECK_INTERVAL = 24 * 60 * 60 * 1000 // 24 hours
+
 export function startUpdateChecker(): void {
-  setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 30_000)
-  setInterval(() => autoUpdater.checkForUpdates().catch(() => {}), 6 * 60 * 60 * 1000)
+  // First check 60 seconds after launch so startup isn't impacted
+  setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 60_000)
+  setInterval(() => autoUpdater.checkForUpdates().catch(() => {}), CHECK_INTERVAL)
 }
