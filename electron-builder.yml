@@ -6,12 +6,19 @@ files:
   - out/**/*
 afterSign: scripts/adhoc-sign.js
 
+publish:
+  provider: github
+  owner: harpar-ai
+  repo: clean-surf
+
 mac:
   target:
     - dmg
+    - zip     # electron-updater uses the zip for silent background updates
   identity: null
   hardenedRuntime: false
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.inherit.plist
+
 dmg:
   title: Clean Surf

@@ -1,116 +1,107 @@
-import { net, shell, dialog, BrowserWindow, BaseWindow } from 'electron'
+import { autoUpdater } from 'electron-updater'
+import { dialog, shell } from 'electron'
 import { app } from 'electron'
 
-const GITHUB_REPO = 'harpar-ai/clean-surf'
-const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000 // every 6 hours
+const GITHUB_RELEASE_URL = 'https://github.com/harpar-ai/clean-surf/releases/latest'
 
-let notifiedVersion: string | null = null
+// Don't download automatically — always ask first
+autoUpdater.autoDownload = false
+autoUpdater.autoInstallOnAppQuit = true
 
-async function fetchLatestVersion(): Promise<{ version: string; url: string } | null> {
-  return new Promise((resolve) => {
-    const req = net.request({
-      method: 'GET',
-      url: `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`,
-      headers: { 'User-Agent': `Clean-Surf-Browser/${app.getVersion()}` }
-    })
-    let body = ''
-    req.on('response', (res) => {
-      res.on('data', (chunk) => { body += chunk.toString() })
-      res.on('end', () => {
-        try {
-          const data = JSON.parse(body)
-          if (data.tag_name) {
-            resolve({ version: data.tag_name.replace(/^v/, ''), url: data.html_url })
-          } else {
-            resolve(null)
-          }
-        } catch { resolve(null) }
-      })
-    })
-    req.on('error', () => resolve(null))
-    req.end()
+// Suppress electron-updater's own dialogs; we handle UX ourselves
+autoUpdater.logger = null
+
+let manualCheck = false
+let downloadInProgress = false
+
+// ─── Events ────────────────────────────────────────────────────────────────
+
+autoUpdater.on('update-available', async (info) => {
+  const { response } = await dialog.showMessageBox({
+    type: 'info',
+    title: 'Update available',
+    message: `Clean Surf ${info.version} is available`,
+    detail: `You are running ${app.getVersion()}. Download the update in the background?`,
+    buttons: ['Download', 'Later'],
+    defaultId: 0
   })
-}
+  if (response === 0) {
+    downloadInProgress = true
+    autoUpdater.downloadUpdate()
+  }
+})
 
-function isNewer(latest: string, current: string): boolean {
-  const parse = (v: string) => v.split('.').map(n => parseInt(n, 10))
-  const [lMaj, lMin, lPat] = parse(latest)
-  const [cMaj, cMin, cPat] = parse(current)
-  if (lMaj !== cMaj) return lMaj > cMaj
-  if (lMin !== cMin) return lMin > cMin
-  return (lPat ?? 0) > (cPat ?? 0)
-}
+autoUpdater.on('update-not-available', () => {
+  if (!manualCheck) return
+  manualCheck = false
+  dialog.showMessageBox({
+    type: 'info',
+    title: 'Clean Surf is up to date',
+    message: `You are on the latest version (${app.getVersion()}).`,
+    buttons: ['OK']
+  })
+})
 
-// For manual "Check for Updates" — always gives feedback via a dialog
-export async function checkForUpdatesManual(): Promise<void> {
-  const current = app.getVersion()
+autoUpdater.on('download-progress', (progress) => {
+  // Could surface progress in the toolbar in future; for now just let it run silently
+  console.log(`[Updater] Download ${Math.round(progress.percent)}%`)
+})
 
-  const result = await fetchLatestVersion()
+autoUpdater.on('update-downloaded', async () => {
+  downloadInProgress = false
+  const { response } = await dialog.showMessageBox({
+    type: 'info',
+    title: 'Update ready to install',
+    message: 'Clean Surf has been updated.',
+    detail: 'Restart now to apply the update, or it will be installed the next time you quit.',
+    buttons: ['Restart Now', 'Later'],
+    defaultId: 0
+  })
+  if (response === 0) {
+    autoUpdater.quitAndInstall()
+  }
+})
 
-  if (!result) {
-    dialog.showMessageBox({
+autoUpdater.on('error', async (err) => {
+  downloadInProgress = false
+  console.error('[Updater] Error:', err.message)
+  if (manualCheck) {
+    manualCheck = false
+    const { response } = await dialog.showMessageBox({
       type: 'warning',
       title: 'Update check failed',
-      message: 'Could not reach GitHub to check for updates.',
-      detail: "Make sure you're connected to the internet and try again.",
-      buttons: ['OK']
+      message: 'Could not check for updates automatically.',
+      detail: 'Open the releases page to download manually?',
+      buttons: ['Open Releases Page', 'Cancel'],
+      defaultId: 0
     })
-    return
+    if (response === 0) shell.openExternal(GITHUB_RELEASE_URL)
   }
+})
 
-  const { version: latest, url } = result
+// ─── Public API ────────────────────────────────────────────────────────────
 
-  if (!isNewer(latest, current)) {
+// Manual "Check for Updates…" from menu — always shows feedback
+export async function checkForUpdatesManual(): Promise<void> {
+  if (downloadInProgress) {
     dialog.showMessageBox({
       type: 'info',
-      title: 'Clean Surf is up to date',
-      message: `You are on the latest version (${current}).`,
+      title: 'Downloading update',
+      message: 'An update is already downloading in the background.',
       buttons: ['OK']
     })
     return
   }
-
-  const { response } = await dialog.showMessageBox({
-    type: 'info',
-    title: 'Update available',
-    message: `Clean Surf ${latest} is available`,
-    detail: `You are running ${current}. Would you like to download the update?`,
-    buttons: ['Download', 'Later'],
-    defaultId: 0
-  })
-
-  if (response === 0) {
-    shell.openExternal(url)
+  manualCheck = true
+  try {
+    await autoUpdater.checkForUpdates()
+  } catch {
+    // error handler fires the dialog
   }
-
-  notifiedVersion = latest
 }
 
-// For background checks — silent if up to date, notification if update found
-export async function checkForUpdates(): Promise<void> {
-  const current = app.getVersion()
-  const result = await fetchLatestVersion()
-  if (!result) return
-
-  const { version: latest, url } = result
-  if (!latest || !isNewer(latest, current)) return
-  if (notifiedVersion === latest) return // already notified for this version
-
-  notifiedVersion = latest
-
-  const { response } = await dialog.showMessageBox({
-    type: 'info',
-    title: 'Update available',
-    message: `Clean Surf ${latest} is available`,
-    detail: `You are running ${current}. Download the update now?`,
-    buttons: ['Download', 'Later'],
-    defaultId: 0
-  })
-
-  if (response === 0) shell.openExternal(url)
-}
-
+// Background check on startup / timer
 export function startUpdateChecker(): void {
-  setTimeout(() => checkForUpdates(), 30_000)
-  setInterval(() => checkForUpdates(), CHECK_INTERVAL_MS)
+  setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 30_000)
+  setInterval(() => autoUpdater.checkForUpdates().catch(() => {}), 6 * 60 * 60 * 1000)
 }
