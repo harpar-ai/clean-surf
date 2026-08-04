@@ -95,11 +95,24 @@ export class CleanShellWindow {
     this.tabManager.setToolbarHeight(height)
   }
 
-  // Expand toolbar to reveal omnibox dropdown (separate WebContentsView workaround).
-  // The expanded area is made transparent so only the dropdown box is visible.
   openOmnibox(): void {
-    const expanded = currentToolbarHeight + OMNIBOX_EXTRA
-    this.uiView.setBackgroundColor('#00000000') // transparent
+    // Start with a single-item expansion; resized dynamically as suggestions arrive
+    this._applyOmniboxHeight(1)
+  }
+
+  // Called each time the suggestion list changes so expansion exactly matches content
+  resizeOmnibox(suggestionCount: number): void {
+    this._applyOmniboxHeight(suggestionCount)
+  }
+
+  private _applyOmniboxHeight(count: number): void {
+    const ITEM_PX = 48
+    const CHROME_PX = 20 // border radius + shadow clearance
+    const dropdownH = Math.max(count, 1) * ITEM_PX + CHROME_PX
+    const expanded = currentToolbarHeight + dropdownH
+    this.uiView.setBackgroundColor('#00000000')
+    // Set window background to white — gap (if any) blends with page backgrounds
+    this.win.setBackgroundColor('#ffffff')
     this.layoutUI(expanded)
     this.tabManager.setToolbarHeight(expanded)
   }
@@ -107,10 +120,11 @@ export class CleanShellWindow {
   closeOmnibox(): void {
     this.layoutUI(currentToolbarHeight)
     this.tabManager.setToolbarHeight(currentToolbarHeight)
-    // Restore solid background after layout settles
     setTimeout(() => {
       if (!this.win.isDestroyed()) {
-        this.uiView.setBackgroundColor(this.isPrivate ? '#1a1a2e' : '#dee1e6')
+        const bg = this.isPrivate ? '#1a1a2e' : '#dee1e6'
+        this.uiView.setBackgroundColor(bg)
+        this.win.setBackgroundColor(bg)
       }
     }, 50)
   }

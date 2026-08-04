@@ -148,7 +148,10 @@ const AddressBar = forwardRef<AddressBarHandle, Props>(
       setTimeout(() => inputRef.current?.select(), 0)
       window.cleanShell.openOmnibox()
       // Show recent history immediately on focus (before typing)
-      buildSuggestions('').then(setSuggestions)
+      buildSuggestions('').then(s => {
+        setSuggestions(s)
+        window.cleanShell.resizeOmnibox(s.length)
+      })
     }
 
     const handleBlur = (e: React.FocusEvent) => {
@@ -170,6 +173,7 @@ const AddressBar = forwardRef<AddressBarHandle, Props>(
       debounceRef.current = setTimeout(async () => {
         const s = await buildSuggestions(val)
         setSuggestions(s)
+        window.cleanShell.resizeOmnibox(s.length)
       }, 120)
     }
 

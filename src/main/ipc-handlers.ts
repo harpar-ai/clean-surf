@@ -42,12 +42,16 @@ export function registerIpcHandlers(registry: BrowserWindowRegistry): void {
     if (mgr && id !== null && id !== undefined) mgr.reload(id)
   })
 
-  // Omnibox open/close — expands toolbar so dropdown clears the page WebContentsView
+  // Omnibox open/close/resize — expands toolbar so dropdown clears the page WebContentsView
   ipcMain.handle('ui:omnibox-open', (_event) => {
     ;(registry as any).getWindowForEvent?.(_event)?.openOmnibox()
   })
   ipcMain.handle('ui:omnibox-close', (_event) => {
     ;(registry as any).getWindowForEvent?.(_event)?.closeOmnibox()
+  })
+  ipcMain.handle('ui:omnibox-resize', (_event, count: unknown) => {
+    const n = typeof count === 'number' ? count : 0
+    ;(registry as any).getWindowForEvent?.(_event)?.resizeOmnibox(n)
   })
 
   // Toolbar height (updated when bookmark bar shows/hides)
