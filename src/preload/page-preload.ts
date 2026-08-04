@@ -123,18 +123,40 @@ function injectMainWorld(): void {
 // Cookie banner MutationObserver + polling (runs in preload/isolated world;
 // clicking DOM buttons works across worlds)
 // ──────────────────────────────────────────────────────────────────────────────
+// ── CMP-specific selectors (tried first for reliability) ─────────────────────
 const CMP_SELECTORS = [
+  // OneTrust
   '#onetrust-reject-all-handler',
-  '[data-testid="uc-deny-all-button"]',
+  'button#onetrust-reject-all-handler',
+  // Cookiebot
   '#CybotCookiebotDialogBodyButtonDecline',
-  '.truste_decline',
+  'a#CybotCookiebotDialogBodyButtonDecline',
+  // Usercentrics
+  '[data-testid="uc-deny-all-button"]',
+  // Didomi
   '#didomi-notice-disagree-button',
-  '.osano-cm-denyAll'
+  // TrustArc
+  '.truste_decline',
+  // Osano
+  '.osano-cm-denyAll',
+  // Funding Choices / Google
+  '[aria-label*="Reject all" i]',
+  '[aria-label*="Deny all" i]',
+  // Generic attribute-based
+  'button[id*="decline" i]',
+  'button[id*="deny" i]',
+  'button[id*="reject" i]',
+  'button[class*="decline" i]:not([class*="declineable"])',
+  'button[class*="deny-all" i]',
+  'button[class*="reject-all" i]',
 ]
-const REJECT_TEXT = /^(reject|decline|deny|no thanks|refuse|essential( only)?|necessary( only)?)$/i
 
-// Close buttons for sign-in / membership / marketing modals
-const SIGNIN_CLOSE_SELECTORS = [
+// Button TEXT patterns — matches visible text of any button/link
+// Intentionally broad to catch many languages and punctuation variants
+const REJECT_TEXT = /^(reject(\s+all)?|decline(\s+all)?|deny(\s+all)?|no,?\s*thanks?|no\s+thank\s+you|refuse|not\s+now|maybe\s+later|skip|essential(\s+only)?|necessary(\s+only)?|save\s+&\s+exit|i\s+do\s+not\s+accept|i\s+refuse|continue\s+without(\s+accepting)?)$/i
+
+// ── Selector for close/dismiss buttons inside modals ──────────────────────────
+const MODAL_CLOSE_SELECTORS = [
   'button[aria-label*="close" i]:not([aria-label*="menu" i])',
   'button[aria-label*="dismiss" i]',
   'button[aria-label*="skip" i]',
@@ -147,27 +169,48 @@ const SIGNIN_CLOSE_SELECTORS = [
   '[class*="modal-close"]'
 ]
 
-// Text patterns that identify modals we want to auto-close
-const INTRUSIVE_MODAL_TEXT = /sign.?in|log.?in|create.?account|membership|genius|register.*save|save.*register|subscribe.*unlock|free.?article.?limit|paywall|subscribe.?now|subscribe.?to.?continue|newsletter.*sign.?up|turn.?off.?ad.?block/i
+// ── Text patterns that identify intrusive modals to auto-close ─────────────────
+const INTRUSIVE_MODAL_TEXT = new RegExp(
+  'sign.?in|log.?in|create.?account|membership|genius' +
+  '|register.*save|save.*register' +
+  '|subscribe.*unlock|free.?article.?limit|paywall|subscribe.?now|subscribe.?to.?continue' +
+  '|newsletter.*sign.?up|turn.?off.?ad.?block' +
+  // Push notification prompts
+  '|push.?notification|allow.?notification|never.?miss.?a.?story|enable.?notification' +
+  '|get.?notified|stay.?updated|breaking.?news.?alert',
+  'i'
+)
+
+// ── Negative buttons inside any detected intrusive modal ──────────────────────
+// Broader than CMP reject — also covers "No, Thanks", "Not now", "Skip", etc.
+const MODAL_NEGATIVE_TEXT = /^(no,?\s*thanks?|no\s+thank\s+you|not\s+now|maybe\s+later|skip|cancel|close|dismiss|later|remind\s+me\s+later|don'?t\s+(allow|show|ask)|block|deny)$/i
 
 function tryDismissSigninModal(): boolean {
-  // Find visible modal/dialog overlays that contain intrusive content
   const dialogs = Array.from(document.querySelectorAll<HTMLElement>(
-    '[role="dialog"], [role="alertdialog"], .modal, [class*="Modal"], [class*="Dialog"], [class*="Overlay"], [class*="paywall"], [class*="subscribe"], [class*="newsletter"]'
+    '[role="dialog"], [role="alertdialog"], .modal, [class*="Modal"], [class*="Dialog"],' +
+    '[class*="Overlay"], [class*="paywall"], [class*="subscribe"], [class*="newsletter"],' +
+    '[class*="notification-prompt"], [class*="push-prompt"]'
   )).filter(el => el.offsetParent !== null && INTRUSIVE_MODAL_TEXT.test(el.textContent ?? ''))
 
   for (const dialog of dialogs) {
-    // Look for a close/dismiss button within the modal
-    for (const sel of SIGNIN_CLOSE_SELECTORS) {
+    // 1. Structural close selectors (aria-label, data-testid, class)
+    for (const sel of MODAL_CLOSE_SELECTORS) {
       const btn = dialog.querySelector<HTMLElement>(sel)
       if (btn && btn.offsetParent !== null) { btn.click(); return true }
     }
-    // Fallback: find an X or × button (common close icon patterns)
-    const btns = Array.from(dialog.querySelectorAll<HTMLElement>('button'))
+
+    // 2. Negative-intent buttons by text ("No, Thanks", "Not now", "Skip", etc.)
+    const btns = Array.from(dialog.querySelectorAll<HTMLElement>('button, [role="button"], a'))
+    const negativeBtn = btns.find(b =>
+      b.offsetParent !== null && MODAL_NEGATIVE_TEXT.test(b.textContent?.trim() ?? '')
+    )
+    if (negativeBtn) { negativeBtn.click(); return true }
+
+    // 3. Last resort: X / × close icon button
     const closeBtn = btns.find(b => {
       const text = b.textContent?.trim() ?? ''
       const label = (b.getAttribute('aria-label') ?? '').toLowerCase()
-      return text === '×' || text === '✕' || text === '✗' || text === 'X' ||
+      return ['×', '✕', '✗', 'X', '✖'].includes(text) ||
              label.includes('close') || label.includes('dismiss')
     })
     if (closeBtn) { closeBtn.click(); return true }
@@ -219,10 +262,19 @@ function startCookieDismissal(): void {
   } else {
     document.addEventListener('DOMContentLoaded', () => tryDismiss(), { once: true })
   }
+
+  // MutationObserver catches dynamically injected banners (SPAs, lazy loaders)
   const obs = new MutationObserver(() => tryDismiss())
   obs.observe(document.documentElement, { childList: true, subtree: true })
+
+  // Fast polling for the first 5s (catches banners that delay their appearance)
+  // then slower polling for up to 60s (catches consent walls that load after scroll/interaction)
   let n = 0
-  const poll = setInterval(() => { if (tryDismiss() || ++n > 40) { clearInterval(poll); obs.disconnect() } }, 500)
+  const poll = setInterval(() => {
+    tryDismiss()
+    n++
+    if (n >= 120) { clearInterval(poll); obs.disconnect() } // 120 × 500ms = 60s
+  }, 500)
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
