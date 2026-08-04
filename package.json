@@ -1,7 +1,7 @@
 {
   "name": "clean-shell",
   "productName": "Clean Surf",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Privacy-first macOS browser",
   "license": "GPL-3.0-only",
   "main": "out/main/index.js",
@@ -9,7 +9,7 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "package": "electron-vite build && electron-builder --mac dmg",
+    "package": "electron-vite build && electron-builder --mac dmg && node scripts/adhoc-sign.js",
     "typecheck": "tsc --noEmit",
     "test": "node tests/browser.test.mjs",
     "check-secrets": "node scripts/check-secrets.js --all",
