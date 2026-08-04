@@ -70,6 +70,15 @@ export function search(query: string): HistoryEntry[] {
   return entries.filter(e => e.url.toLowerCase().includes(q) || e.title.toLowerCase().includes(q))
 }
 
+// Update the title of the most recent entry for a URL (called after page-title-updated)
+export function updateTitle(url: string, title: string): void {
+  const entry = entries.find(e => e.url === url)
+  if (entry && title) {
+    entry.title = title
+    save()
+  }
+}
+
 export function generateHistoryPage(query = ''): string {
   const filtered = query ? search(query) : entries
   const grouped: Record<string, HistoryEntry[]> = {}

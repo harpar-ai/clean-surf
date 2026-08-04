@@ -1,6 +1,7 @@
 import { ipcMain, dialog } from 'electron'
 import type { BrowserWindowRegistry } from './browser-window'
 import * as bookmarkManager from './bookmark-manager'
+import * as historyManager from './history-manager'
 import { TOOLBAR_HEIGHT_NO_BAR, TOOLBAR_HEIGHT_WITH_BAR } from './constants'
 
 export function registerIpcHandlers(registry: BrowserWindowRegistry): void {
@@ -78,8 +79,9 @@ export function registerIpcHandlers(registry: BrowserWindowRegistry): void {
   // History search (for address bar autocomplete)
   ipcMain.handle('history:search', (_event, query: unknown) => {
     if (typeof query !== 'string' || query.length > 512) return []
-    const { search, getAll } = require('./history-manager') as typeof import('./history-manager')
-    const results = query.trim() ? search(query) : getAll()
+    const results = query.trim()
+      ? historyManager.search(query)
+      : historyManager.getAll()
     return results.slice(0, 8).map(e => ({ url: e.url, title: e.title }))
   })
 

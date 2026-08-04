@@ -95,9 +95,11 @@ export class CleanShellWindow {
     this.tabManager.setToolbarHeight(height)
   }
 
-  // Expand toolbar to reveal omnibox dropdown (separate WebContentsView workaround)
+  // Expand toolbar to reveal omnibox dropdown (separate WebContentsView workaround).
+  // The expanded area is made transparent so only the dropdown box is visible.
   openOmnibox(): void {
     const expanded = currentToolbarHeight + OMNIBOX_EXTRA
+    this.uiView.setBackgroundColor('#00000000') // transparent
     this.layoutUI(expanded)
     this.tabManager.setToolbarHeight(expanded)
   }
@@ -105,6 +107,12 @@ export class CleanShellWindow {
   closeOmnibox(): void {
     this.layoutUI(currentToolbarHeight)
     this.tabManager.setToolbarHeight(currentToolbarHeight)
+    // Restore solid background after layout settles
+    setTimeout(() => {
+      if (!this.win.isDestroyed()) {
+        this.uiView.setBackgroundColor(this.isPrivate ? '#1a1a2e' : '#dee1e6')
+      }
+    }, 50)
   }
 }
 

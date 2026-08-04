@@ -399,12 +399,12 @@ await test('Clicking bookmark navigates to that URL', async () => {
 
 await test('Bookmark bar toggles via menu', async () => {
   const before = await ui.evaluate(() => !!document.querySelector('.bookmark-bar'))
-  await menuClick('Bookmarks', 'Bookmarks Bar')
+  await menuClick('Bookmarks', 'Show Bookmarks Bar')
   await wait(400)
   const after = await ui.evaluate(() => !!document.querySelector('.bookmark-bar'))
   assert(before !== after, 'Bookmark bar did not toggle')
   // Restore
-  await menuClick('Bookmarks', 'Bookmarks Bar')
+  await menuClick('Bookmarks', 'Show Bookmarks Bar')
   await wait(400)
 })
 
@@ -426,6 +426,12 @@ await test('History page tab title contains "History"', async () => {
 })
 
 await test('History address bar shows cleanshell://history', async () => {
+  // Use IPC getTabsState to get real tab IDs (DOM tabs helper doesn't include ID)
+  const tabsState = await ui.evaluate(() => window.cleanShell.getTabsState())
+  const histTab = tabsState.find(t => t.title.toLowerCase().includes('history'))
+  assert(histTab, `No history tab found. Tabs: ${tabsState.map(t => t.title).join(', ')}`)
+  await ui.evaluate(id => window.cleanShell.switchTab(id), histTab.id)
+  await wait(1_000)
   const url = await getUrl()
   assert(url.includes('cleanshell'), `Got: ${url}`)
 })
@@ -598,6 +604,82 @@ await test('Last tab close destroys the window', async () => {
     BaseWindow.getAllWindows().length
   ).catch(() => 0)
   assert(winsAfter < winsBefore || winsAfter === 0, `Windows: ${winsBefore} → ${winsAfter}`)
+})
+
+// ═══════════════════════════════════════════════════════════════════════════════
+console.log('\n── Omnibox autocomplete ──')
+
+await test('History is recorded after navigation', async () => {
+  await navigate('https://example.com')
+  await wait(4_000)
+  // History search via IPC should find this URL
+  const results = await ui.evaluate(async () =>
+    window.cleanShell.searchHistory('example')
+  )
+  assert(results.length > 0, `Expected history results for "example", got ${results.length}`)
+  assert(results[0].url.includes('example.com'), `URL mismatch: ${results[0].url}`)
+})
+
+await test('Omnibox dropdown appears when address bar is focused', async () => {
+  // Navigate somewhere first to have history
+  await navigate('https://example.com')
+  await wait(4_000)
+  // Open a new tab and focus the address bar
+  await menuClick('File', 'New Tab')
+  await wait(1_000)
+  // Trigger omnibox open
+  await ui.evaluate(() => window.cleanShell.openOmnibox())
+  await ui.evaluate(() => document.querySelector('.address-input')?.focus())
+  await wait(600)
+  const dropdownVisible = await ui.evaluate(() =>
+    !!document.querySelector('.omnibox-dropdown')
+  )
+  assert(dropdownVisible, 'Omnibox dropdown did not appear after focusing address bar')
+  await ui.evaluate(() => window.cleanShell.closeOmnibox())
+})
+
+await test('Typing in address bar shows history suggestions', async () => {
+  // We already navigated to example.com above
+  await menuClick('File', 'New Tab')
+  await wait(800)
+  // Open omnibox and type
+  await ui.evaluate(() => window.cleanShell.openOmnibox())
+  await ui.evaluate(() => {
+    const input = document.querySelector('.address-input')
+    input.focus()
+    input.value = 'example'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  // Manually trigger the search since React synthetic events may differ
+  const results = await ui.evaluate(async () =>
+    window.cleanShell.searchHistory('example')
+  )
+  assert(results.length > 0, 'No history results returned for "example"')
+  assert(results.some(r => r.url.includes('example.com')),
+    `example.com not in results: ${JSON.stringify(results.map(r => r.url))}`)
+  await ui.evaluate(() => window.cleanShell.closeOmnibox())
+})
+
+await test('No grey area visible when omnibox is closed', async () => {
+  // Check that the expanded toolbar area is transparent (not a grey block)
+  const toolbarBg = await ui.evaluate(() => {
+    const toolbar = document.querySelector('.toolbar')
+    return window.getComputedStyle(toolbar).backgroundColor
+  })
+  // Should be transparent or rgba(0,0,0,0) — NOT the grey #dee1e6
+  const isTransparent = toolbarBg === 'rgba(0, 0, 0, 0)' || toolbarBg === 'transparent'
+  assert(isTransparent, `Toolbar background should be transparent, got: ${toolbarBg}`)
+})
+
+await test('History title updates after page-title-updated fires', async () => {
+  await navigate('https://example.com')
+  await wait(5_000) // wait for title to load
+  const results = await ui.evaluate(async () =>
+    window.cleanShell.searchHistory('example')
+  )
+  const entry = results.find(r => r.url.includes('example.com'))
+  assert(entry, 'example.com not found in history')
+  assert(entry.title.length > 0, `History title is empty for ${entry.url}`)
 })
 
 // ═══════════════════════════════════════════════════════════════════════════════

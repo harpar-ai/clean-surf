@@ -2,7 +2,7 @@ import { WebContentsView } from 'electron'
 import type { BaseWindow, Session } from 'electron'
 import type { ExtensionManager } from './extension-manager'
 import { applyAdBlocker } from './ad-blocker'
-import { addEntry } from './history-manager'
+import { addEntry, updateTitle } from './history-manager'
 import { TOOLBAR_HEIGHT } from './constants'
 import path from 'path'
 
@@ -147,6 +147,8 @@ export class TabManager {
       tab.title = title
       this.notifyTabsChanged()
       this.sendToUI('page:title-update', { tabId: tab.id, title })
+      // Backfill the title once it's available (did-navigate fires before title loads)
+      if (!this.isPrivate && tab.url) updateTitle(tab.url, title)
     })
 
     wc.on('page-favicon-updated', (_e, favicons) => {
