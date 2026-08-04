@@ -48,6 +48,25 @@ export function registerIpcHandlers(registry: BrowserWindowRegistry): void {
     csWin?.setToolbarHeight(height)
   })
 
+  // Bookmark bar state change — used to update menu checkmark
+  ipcMain.handle('ui:bookmark-bar-state', (_event, visible: boolean) => {
+    const height = visible ? TOOLBAR_HEIGHT_WITH_BAR : TOOLBAR_HEIGHT_NO_BAR
+    const csWin = (registry as any).getWindowForEvent?.(_event)
+    csWin?.setToolbarHeight(height)
+    // Rebuild the app menu so the checkmark updates
+    const { Menu } = require('electron') as typeof import('electron')
+    const currentMenu = Menu.getApplicationMenu()
+    if (currentMenu) {
+      // Find and update the Bookmarks Bar menu item checked state
+      for (const item of currentMenu.items) {
+        if (item.label === 'Bookmarks') {
+          const barItem = item.submenu?.items.find(i => i.label === 'Bookmarks Bar')
+          if (barItem) (barItem as any).checked = visible
+        }
+      }
+    }
+  })
+
   // Bookmarks
   ipcMain.handle('bookmarks:get', () => bookmarkManager.getAll())
   ipcMain.handle('bookmarks:clear', (_event) => {

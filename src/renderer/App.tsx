@@ -17,6 +17,7 @@ declare global {
       goForward: () => Promise<void>
       reload: () => Promise<void>
       setToolbarHeight: (showBar: boolean) => Promise<void>
+      notifyBookmarkBarState: (visible: boolean) => Promise<void>
       getBookmarks: () => Promise<Bookmark[]>
       isBookmarked: (url: string) => Promise<boolean>
       toggleBookmark: (url: string, title: string, favicon: string) => Promise<boolean>
@@ -61,12 +62,10 @@ export default function App() {
   const [tabs, setTabs] = useState<TabState[]>([])
   const [isPrivate, setIsPrivate] = useState(false)
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
-  // Persist bookmark bar preference; defaults to true (bar shows once bookmarks are added)
+  // Chrome behavior: bar is HIDDEN by default, user must explicitly enable it (Cmd+Shift+B)
   const [showBookmarkBar, setShowBookmarkBar] = useState(
-    () => localStorage.getItem('bookmarkBarVisible') !== 'false'
+    () => localStorage.getItem('bookmarkBarVisible') === 'true'
   )
-  // On very first launch (no preference stored), default to showing the bar when bookmarks exist
-  // This means: no bookmarks → bar hidden, bookmarks added → bar appears automatically
   const addressBarRef = useRef<AddressBarHandle>(null)
 
   const activeTab = tabs.find(t => t.isActive) ?? null
@@ -77,8 +76,9 @@ export default function App() {
   const activeTabRef = useRef(activeTab)
   useEffect(() => { activeTabRef.current = activeTab }, [activeTab])
 
-  // Bookmark bar is physically visible only when user wants it AND there are bookmarks
-  const bookmarkBarVisible = showBookmarkBar && bookmarks.length > 0
+  // Chrome behavior: bar visible when user has it on, regardless of bookmark count
+  // (shows empty bar with hint text when no bookmarks, like Chrome)
+  const bookmarkBarVisible = showBookmarkBar
 
   // Tell main process to resize the WebContentsViews when bar visibility changes
   useEffect(() => {
@@ -107,7 +107,7 @@ export default function App() {
     const onToggleBookmarkBar = () => setShowBookmarkBar(v => {
       const next = !v
       localStorage.setItem('bookmarkBarVisible', String(next))
-      window.cleanShell.setToolbarHeight(next && bookmarks.length > 0)
+      window.cleanShell.notifyBookmarkBarState(next)
       return next
     })
     const onFocusAddressBar = () => addressBarRef.current?.focus()

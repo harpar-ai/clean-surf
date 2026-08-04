@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('cleanShell', {
 
   // Toolbar layout
   setToolbarHeight: (showBar: boolean) => ipcRenderer.invoke('ui:set-toolbar-height', showBar),
+  notifyBookmarkBarState: (visible: boolean) => ipcRenderer.invoke('ui:bookmark-bar-state', visible),
 
   // Bookmarks
   getBookmarks: () => ipcRenderer.invoke('bookmarks:get'),

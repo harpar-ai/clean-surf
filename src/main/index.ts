@@ -9,6 +9,8 @@ import * as historyManager from './history-manager'
 
 app.name = 'Clean Surf'
 
+let bookmarkBarVisible = false // default hidden, like Chrome
+
 // Set custom dock icon — overrides the Electron atom logo at runtime
 app.whenReady().then(() => {
   const iconPath = path.join(__dirname, '../../assets/CleanSurf.icns')
@@ -251,9 +253,10 @@ function buildAppMenu(): void {
           click: tabAction(mgr => mgr?.sendToUIPublic('toggle-bookmark', {}))
         },
         {
-          label: 'Bookmarks Bar',
+          label: 'Show Bookmarks Bar',
           accelerator: 'CmdOrCtrl+Shift+B',
-          // Label is static in menu; the renderer handles the toggle and persists state
+          type: 'checkbox' as const,
+          checked: bookmarkBarVisible,
           click: tabAction(mgr => mgr?.sendToUIPublic('toggle-bookmark-bar', {}))
         }
       ]
