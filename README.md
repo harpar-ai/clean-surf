@@ -165,7 +165,7 @@ Clean Surf is designed for personal use. It does **not**:
 - Sync data to any server
 - Require an account
 
-All data (history, bookmarks) is stored locally in `~/Library/Application Support/Electron/`.
+All data (history, bookmarks) is stored locally in `~/Library/Application Support/Clean Surf/`.
 
 ---
 

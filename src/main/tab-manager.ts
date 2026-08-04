@@ -133,6 +133,10 @@ export class TabManager {
 
     this.switchTab(id)
     this.notifyTabsChanged()
+
+    // Auto-focus address bar so user can start typing immediately (like Chrome)
+    this.sendToUI('focus-address-bar', {})
+
     return id
   }
 
