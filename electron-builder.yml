@@ -1,0 +1,15 @@
+appId: com.cleanshell.browser
+productName: Clean Surf
+directories:
+  output: dist
+files:
+  - out/**/*
+mac:
+  target:
+    - dmg
+  sign: false
+  hardenedRuntime: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.inherit.plist
+dmg:
+  title: Clean Surf
