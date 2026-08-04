@@ -180,6 +180,17 @@ To report a security issue, open a [GitHub issue](https://github.com/harpar-ai/c
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+GPL-3.0 — see [LICENSE](LICENSE).
 
-Built on [Electron](https://www.electronjs.org/) (MIT), [Ghostery Adblocker](https://github.com/ghostery/adblocker) (MPL-2.0), and [electron-chrome-extensions](https://github.com/samuelmaddock/electron-chrome-extensions) (GPL-3.0).
+This project uses [electron-chrome-extensions](https://github.com/samuelmaddock/electron-chrome-extensions) (GPL-3.0), which requires the combined work to also be GPL-3.0. Source code is available in this repository.
+
+**Third-party components:**
+- [Electron](https://www.electronjs.org/) — MIT
+- [Chromium](https://www.chromium.org/) — BSD-3-Clause
+- [@ghostery/adblocker-electron](https://github.com/ghostery/adblocker) — MPL-2.0
+- [electron-chrome-extensions](https://github.com/samuelmaddock/electron-chrome-extensions) — GPL-3.0
+- [React](https://react.dev/) — MIT
+
+---
+
+> Clean Surf is an independent project and is not affiliated with, endorsed by, or connected to Google LLC, the Chromium project, or the Chrome browser. "Chrome" and "Chromium" are trademarks of Google LLC.
