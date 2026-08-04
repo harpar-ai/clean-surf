@@ -1,26 +1,14 @@
 /**
- * Ad-hoc signs the packaged .app inside the DMG's staging folder.
- * Ad-hoc signing (-) means no certificate is needed but Gatekeeper
- * downgrades the block from "damaged" → "unidentified developer",
- * which users can bypass with right-click → Open.
+ * electron-builder afterSign hook — runs BEFORE the DMG is created.
+ * Ad-hoc signs the .app so macOS shows "unidentified developer"
+ * instead of "damaged and can't be opened".
  */
 const { execFileSync } = require('child_process')
-const fs = require('fs')
 const path = require('path')
-const glob = require('fs').readdirSync
 
-const appDir = path.join(__dirname, '..', 'dist', 'mac-arm64')
-const app = path.join(appDir, 'Clean Surf.app')
-
-if (!fs.existsSync(app)) {
-  console.log('Ad-hoc sign: app not found at', app, '— skipping')
-  process.exit(0)
+exports.default = async function afterSign(context) {
+  const appPath = path.join(context.appOutDir, `${context.packager.appInfo.productName}.app`)
+  console.log(`Ad-hoc signing: ${appPath}`)
+  execFileSync('codesign', ['--force', '--deep', '--sign', '-', appPath])
+  console.log('✓ Ad-hoc signing complete')
 }
-
-console.log('Ad-hoc signing', app)
-execFileSync('codesign', [
-  '--force', '--deep', '--sign', '-',
-  '--options', 'runtime',
-  app
-])
-console.log('✓ Ad-hoc signing complete')

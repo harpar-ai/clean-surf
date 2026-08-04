@@ -4,10 +4,12 @@ directories:
   output: dist
 files:
   - out/**/*
+afterSign: scripts/adhoc-sign.js
+
 mac:
   target:
     - dmg
-  identity: null        # null = ad-hoc sign with "-" (no certificate needed)
+  identity: null
   hardenedRuntime: false
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.inherit.plist
