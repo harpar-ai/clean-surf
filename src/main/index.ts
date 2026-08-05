@@ -9,6 +9,13 @@ import * as historyManager from './history-manager'
 
 app.name = 'Clean Surf'
 
+// Remove Electron-specific Chromium flags that differ from real Chrome
+// and trigger Google's embedded-browser detection
+app.commandLine.removeSwitch('no-first-run')
+app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors')
+// Tell Chromium we are a first-party browser, not an embedded frame
+app.commandLine.appendSwitch('enable-features', 'NetworkServiceInProcess2')
+
 let bookmarkBarVisible = false // default hidden, like Chrome
 
 // Set custom dock icon — overrides the Electron atom logo at runtime

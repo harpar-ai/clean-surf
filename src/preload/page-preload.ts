@@ -110,6 +110,32 @@ function injectMainWorld(): void {
     Object.defineProperty(screen, 'pixelDepth',  { get: () => 24, configurable: true });
   } catch(e) {}
 
+  // ── 6. window.chrome stub ────────────────────────────────────────────────
+  // Google sign-in probes window.chrome.runtime — Electron's stub is incomplete
+  // which triggers the "browser may not be secure" block. Provide a fuller stub.
+  try {
+    if (!window.chrome) window.chrome = {};
+    if (!window.chrome.runtime) {
+      window.chrome.runtime = {
+        id: undefined,
+        connect: function() {},
+        sendMessage: function() {},
+        onMessage: { addListener: function() {}, removeListener: function() {} },
+        onConnect: { addListener: function() {}, removeListener: function() {} },
+      };
+    }
+    if (!window.chrome.app) {
+      window.chrome.app = {
+        isInstalled: false,
+        getDetails: function() { return null; },
+        getIsInstalled: function() { return false; },
+        installState: { DISABLED: 'disabled', INSTALLED: 'installed', NOT_INSTALLED: 'not_installed' },
+      };
+    }
+    if (!window.chrome.csi) window.chrome.csi = function() { return { startE: Date.now(), onloadT: Date.now(), pageT: 0, tran: 15 }; };
+    if (!window.chrome.loadTimes) window.chrome.loadTimes = function() { return { commitLoadTime: Date.now()/1000, connectionInfo: 'h2', finishDocumentLoadTime: 0, finishLoadTime: 0, firstPaintAfterLoadTime: 0, firstPaintTime: 0, navigationType: 'Other', npnNegotiatedProtocol: 'h2', requestTime: Date.now()/1000, startLoadTime: Date.now()/1000, wasAlternateProtocolAvailable: false, wasFetchedViaSpdy: true, wasNpnNegotiated: true }; };
+  } catch(e) {}
+
 })(${sessionNoise});
   `.trim()
 
