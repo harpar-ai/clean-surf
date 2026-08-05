@@ -682,50 +682,62 @@ await test('History title updates after page-title-updated fires', async () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 console.log('\n── Google sign-in compatibility ──')
 
-await test('Google accounts sign-in page loads without "browser not secure" block', async () => {
-  // Test against accounts.google.com directly — this is the actual sign-in flow
+await test('Google sign-in via mail.google.com does NOT reach /rejected URL (v3 flow)', async () => {
+  // This is the REAL-WORLD path: navigate to Gmail → Google redirects to sign-in.
+  // The v3 flow sends to /v3/signin/rejected if it detects an unsupported browser.
+  // The v2 flow (/signin/v2/identifier) still works in some contexts — test the harder case.
+  await menuClick('File', 'New Tab')
+  await wait(800)
+  await navigate('https://mail.google.com')
+  await wait(8_000) // Gmail redirects take longer
+
+  const allWins = app.windows().filter(w => !w.url().includes('index.html'))
+  const googleWin = allWins.find(w => w.url().includes('google.com'))
+  if (!googleWin) {
+    console.log('  (No google.com tab found — may be signed in already)')
+    return
+  }
+
+  const finalUrl = googleWin.url()
+  const pageText = await googleWin.evaluate(() => document.body?.innerText ?? '')
+
+  // This is the key assertion — /rejected means Google blocked us at the server level
+  const isRejected = finalUrl.includes('/rejected') ||
+                     finalUrl.includes('signin/rejected')
+  const isBlocked = pageText.includes("Couldn't sign you in") ||
+                    pageText.includes("not be secure")
+
+  // Report the actual URL and text for debugging
+  if (isRejected || isBlocked) {
+    throw new Error(
+      `Google rejected sign-in.\nURL: ${finalUrl}\nPage: ${pageText.slice(0, 300)}`
+    )
+  }
+})
+
+await test('Google accounts sign-in page shows email input (v2 flow)', async () => {
+  // Also test the older /v2/identifier endpoint as a baseline
   await menuClick('File', 'New Tab')
   await wait(800)
   await navigate('https://accounts.google.com/signin/v2/identifier')
-  await wait(6_000)
+  await wait(5_000)
 
-  // Find the tab that ended up on accounts.google.com
   const signinWin = app.windows().find(w =>
     w.url().includes('accounts.google.com') && !w.url().includes('index.html')
   )
   if (!signinWin) {
-    // Redirected — likely already signed in, which means it worked
-    console.log('  (Redirected — likely already signed in, acceptable)')
+    console.log('  (Redirected — likely already signed in)')
     return
   }
 
-  const pageText = await signinWin.evaluate(() => document.body.innerText ?? '')
-  const isBlocked = pageText.includes("Couldn't sign you in") ||
-                    pageText.includes("not be secure") ||
-                    pageText.includes("browser isn't supported")
-  const isSignInPage = pageText.toLowerCase().includes('sign in') ||
-                       pageText.toLowerCase().includes('email') ||
-                       pageText.toLowerCase().includes('google account')
+  const url = signinWin.url()
+  const isRejected = url.includes('/rejected')
+  assert(!isRejected, `v2 sign-in flow was rejected. URL: ${url}`)
 
-  assert(!isBlocked, `Google blocked sign-in. Page says: ${pageText.slice(0, 200)}`)
-  assert(isSignInPage, `Expected sign-in page. Got: ${pageText.slice(0, 200)}`)
-})
-
-await test('Google sign-in email field is present and accepts input', async () => {
-  const signinWin = app.windows().find(w =>
-    w.url().includes('accounts.google.com') && !w.url().includes('index.html')
+  const hasEmailInput = await signinWin.evaluate(() =>
+    !!document.querySelector('input[type="email"], input[name="identifier"], #identifierId')
   )
-  if (!signinWin) {
-    console.log('  (No accounts.google.com tab — skipping, may already be signed in)')
-    return
-  }
-
-  // Check the email input field exists
-  const hasEmailInput = await signinWin.evaluate(() => {
-    const input = document.querySelector('input[type="email"], input[name="identifier"], input#identifierId')
-    return !!input
-  })
-  assert(hasEmailInput, 'No email input field found on Google sign-in page')
+  assert(hasEmailInput, `No email input found. URL: ${url}`)
 })
 
 // ═══════════════════════════════════════════════════════════════════════════════
